@@ -312,9 +312,19 @@ namespace Ketarin.Forms
         /// </summary>
         private void SetRtfContent()
         {
+            this.rtfStatus.ForeColor = SystemColors.WindowText;
+            this.rtfStatus.Text = string.Empty;
             if (this.CurrentVariable.VariableType == UrlVariable.Type.Textual)
             {
                 this.rtfContent.Text = this.CurrentVariable.TextualContent;
+                try
+                {
+                    this.rtfStatus.Text = "After substitution: " + this.m_Variables.ReplaceAllInString(this.CurrentVariable.TextualContent);
+                }
+                catch
+                {
+                    this.rtfStatus.Text = "Failed substitution for: " + this.CurrentVariable.TextualContent;
+                }
             }
             else
             {
@@ -401,13 +411,15 @@ namespace Ketarin.Forms
         {
             // Load URL contents and show a wait cursor in the meantime
             this.Cursor = Cursors.WaitCursor;
-
             try
             {
                 using (WebClient client = new WebClient(this.UserAgent))
                 {
                     string expandedUrl = null;
                     string postData = null;
+
+                    this.rtfStatus.ForeColor = SystemColors.WindowText;
+                    this.rtfStatus.Text = "Please wait while the content is being downloaded...";
 
                     // Note: The Text property might modify the text value
                     using (ProgressDialog dialog = new ProgressDialog("Loading URL", "Please wait while the content is being downloaded..."))
@@ -434,16 +446,28 @@ namespace Ketarin.Forms
                             // Check whether or not the URL is valid and show an error message if necessary
                             if (dialog.Error is ArgumentNullException || string.IsNullOrEmpty(expandedUrl))
                             {
-                                MessageBox.Show(this, "The URL you entered is empty and cannot be loaded.", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                this.CurrentVariable.TempContent = String.Empty;
+                                this.rtfStatus.Text = "The URL you entered is empty and cannot be loaded.";
+                                //MessageBox.Show(this, "The URL you entered is empty and cannot be loaded.", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
                             }
                             else if (dialog.Error is UriFormatException)
                             {
-                                MessageBox.Show(this, "The specified URL '" + expandedUrl + "' is not valid.", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                this.CurrentVariable.TempContent = String.Empty;
+                                this.rtfStatus.Text = "Invalid URL specified: '" + expandedUrl + "'";
+                                //MessageBox.Show(this, "The specified URL '" + expandedUrl + "' is not valid.", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
                             }
                             else
                             {
-                                MessageBox.Show(this, "The contents of the URL can not be loaded: " + dialog.Error.Message, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                this.CurrentVariable.TempContent = String.Empty;
+                                this.rtfStatus.Text = "The contents of the URL can not be loaded: " + dialog.Error.Message;
+                                //MessageBox.Show(this, "The contents of the URL can not be loaded: " + dialog.Error.Message, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
                             }
+                            this.rtfStatus.ForeColor = Color.Red;
+                        }
+                        else
+                        {
+                          this.rtfStatus.ForeColor = Color.Green;
+                          this.rtfStatus.Text = "Loaded URL: " + expandedUrl;
                         }
                     }
 
@@ -465,7 +489,9 @@ namespace Ketarin.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "An error occured when loading the URL: " + ex.Message, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+              this.rtfStatus.Text = "An error occured when loading the URL: " + ex.Message;
+              this.rtfStatus.ForeColor = Color.Red;
+              //MessageBox.Show(this, "An error occured when loading the URL: " + ex.Message, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -679,6 +705,14 @@ namespace Ketarin.Forms
             if (this.CurrentVariable != null && this.CurrentVariable.VariableType == UrlVariable.Type.Textual)
             {
                 this.CurrentVariable.TextualContent = this.rtfContent.Text;
+                try
+                {
+                    this.rtfStatus.Text = "After substitution: " + this.m_Variables.ReplaceAllInString(this.CurrentVariable.TextualContent);
+                }
+                catch
+                {
+                    this.rtfStatus.Text = "Failed substitution for: " + this.CurrentVariable.TextualContent;
+                }
             }
         }
 
